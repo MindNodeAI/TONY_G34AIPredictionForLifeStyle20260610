@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生活產業AI預測解決方案</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        neon: '#38bdf8',
+                        gold: '#fbbf24',
+                        dark: '#0f172a',
+                        darker: '#020617'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            background-color: #020617;
+            color: #e2e8f0;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,0.2) 0, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+
+        .blueprint-input {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .blueprint-input:focus {
+            outline: none;
+            border-color: #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+
+        .loader {
+            border: 3px solid rgba(56, 189, 248, 0.2);
+            border-bottom-color: #38bdf8;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .markdown-body h1 { font-size: 1.5em; font-weight: bold; margin-bottom: 0.5em; color: #fbbf24; }
+        .markdown-body h2 { font-size: 1.25em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: #38bdf8; border-bottom: 1px solid #1e293b; padding-bottom: 0.25em; }
+        .markdown-body ul { list-style-type: disc; margin-left: 1.5em; margin-bottom: 1em; }
+        .markdown-body p { margin-bottom: 1em; line-height: 1.6; }
+        .markdown-body strong { color: #fff; font-weight: 600; }
+
+        #aiAssistantPanel {
+            resize: both;
+            overflow: hidden;
+            min-width: 300px;
+            min-height: 400px;
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col relative">
+
+    <div id="apiKeyBar" class="fixed top-24 left-1/2 -translate-x-1/2 w-[90%] md:w-auto max-w-2xl bg-slate-900/95 backdrop-blur-xl border border-neon/50 rounded-2xl px-5 py-4 z-[100] shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col md:flex-row justify-between items-center gap-4 transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-10">
+        <div class="flex items-center gap-3 w-full md:w-auto">
+            <i class="fa-solid fa-key text-neon text-xl"></i>
+            <div class="flex-grow">
+                <p class="text-sm font-semibold text-white">Gemini API Key</p>
+                <p class="text-xs text-slate-400">金鑰僅會加密儲存於您的瀏覽器中</p>
+            </div>
+        </div>
+        <div class="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+            <input type="password" id="apiKeyInput" placeholder="輸入您的 API Key" class="w-full sm:w-64 bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon">
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button id="saveApiKeyBtn" class="flex-1 sm:flex-none bg-neon hover:bg-sky-400 text-slate-900 font-bold px-4 py-2 rounded-lg text-sm transition-colors shadow-lg">儲存</button>
+                <button id="closeApiKeyBar" class="p-2 text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-times"></i></button>
+            </div>
+        </div>
+        <div class="w-full text-center md:text-left text-xs">
+            <span id="apiKeyStatus" class="text-rose-400"><i class="fa-solid fa-triangle-exclamation mr-1"></i>尚未設定，請點擊右方連結申請</span>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-neon hover:text-white hover:underline ml-2"><i class="fa-solid fa-external-link-alt mr-1"></i>取得 API Key</a>
+        </div>
+    </div>
+
+    <!-- Floating button to reopen API Key bar (置於左下角) -->
+    <button id="openApiKeyBar" class="fixed bottom-6 left-6 bg-slate-900 border-2 border-neon/50 w-14 h-14 rounded-full text-neon hover:text-white hover:border-neon hover:shadow-[0_0_20px_rgba(56,189,248,0.5)] z-[55] hidden shadow-lg flex items-center justify-center text-xl transition-all duration-300 transform hover:scale-110 backdrop-blur" title="設定 API Key">
+        <i class="fa-solid fa-key"></i>
+    </button>
+
+    <!-- 浮動式膠囊導覽列 -->
+    <nav class="fixed top-4 left-4 right-4 lg:left-1/2 lg:-translate-x-1/2 lg:w-[calc(100%-2rem)] max-w-7xl z-50 glass-panel rounded-2xl border border-sky-900/50 transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.5)]" id="navbar">
+        <div class="px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3 text-neon font-bold text-lg md:text-xl shrink-0">
+                    <img src="https://i.postimg.cc/fT2sQW09/1.png" alt="Logo" class="h-10 w-auto object-contain bg-slate-800/50 rounded-lg p-1">
+                    <span class="tracking-wider">AI 預測解決方案</span>
+                </div>
+                
+                <!-- Desktop Menu -->
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-center space-x-6">
+                        <a href="#profile-section" class="hover:text-gold transition-colors px-3 py-2 rounded-md text-sm font-medium">顧問簡介</a>
+                        <a href="#concept" class="hover:text-gold transition-colors px-3 py-2 rounded-md text-sm font-medium">核心觀念</a>
+                        <a href="#map" class="hover:text-gold transition-colors px-3 py-2 rounded-md text-sm font-medium">解決方案地圖</a>
+                        <a href="#task" class="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 hover:from-amber-400 hover:to-yellow-300 transition-colors px-5 py-2 rounded-full text-sm font-bold shadow-[0_0_15px_rgba(251,191,36,0.3)] shrink-0">開始規劃</a>
+                    </div>
+                </div>
+
+                <!-- Mobile Menu Button (Hamburger) -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobileMenuBtn" class="text-neon hover:text-white p-2 rounded-lg focus:outline-none transition-colors">
+                        <i class="fa-solid fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobileMenu" class="hidden md:hidden border-t border-sky-900/50 bg-slate-900/95 rounded-b-2xl absolute w-full left-0 top-full mt-2 shadow-[0_20px_40px_rgba(0,0,0,0.8)] overflow-hidden backdrop-blur-xl">
+            <div class="px-2 pt-2 pb-6 space-y-1 sm:px-3 flex flex-col items-center">
+                <a href="#profile-section" class="mobile-link text-slate-200 hover:text-gold hover:bg-slate-800 block px-3 py-3 rounded-md text-base font-medium w-full text-center transition-colors">顧問簡介</a>
+                <a href="#concept" class="mobile-link text-slate-200 hover:text-gold hover:bg-slate-800 block px-3 py-3 rounded-md text-base font-medium w-full text-center transition-colors">核心觀念</a>
+                <a href="#map" class="mobile-link text-slate-200 hover:text-gold hover:bg-slate-800 block px-3 py-3 rounded-md text-base font-medium w-full text-center transition-colors">解決方案地圖</a>
+                <a href="#task" class="mobile-link mt-4 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 hover:from-amber-400 hover:to-yellow-300 transition-colors px-5 py-3 rounded-full text-base font-bold shadow-[0_0_15px_rgba(251,191,36,0.3)] w-[80%] text-center inline-block">開始規劃</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow flex flex-col items-center pt-10 pb-12 w-full">
+        <div id="topSpacer" class="h-32 w-full transition-all duration-300"></div>
+
+        <div class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-24">
+
+            <section id="profile-section" class="scroll-mt-32">
+                <div class="glass-panel rounded-3xl p-8 md:p-12 shadow-2xl border border-sky-900/50 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-neon/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                    <div class="absolute bottom-0 left-0 w-64 h-64 bg-gold/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
+                    
+                    <div class="flex flex-col md:flex-row gap-10 relative z-10 items-center md:items-start">
+                        <div class="shrink-0">
+                            <div class="w-48 h-48 md:w-56 md:h-56 rounded-full p-2 bg-gradient-to-tr from-neon via-sky-500 to-gold shadow-[0_0_30px_rgba(56,189,248,0.3)]">
+                                <img src="https://i.postimg.cc/Gh8Zt7SX/S_56844323.jpg" alt="TONY 楊文澤" class="w-full h-full object-cover rounded-full border-4 border-dark">
+                            </div>
+                        </div>
+                        
+                        <div class="flex-grow text-center md:text-left space-y-6">
+                            <div>
+                                <h1 class="text-3xl md:text-4xl font-bold text-white mb-2"><span class="text-neon">TONY</span> 楊文澤 <span class="text-xl md:text-2xl text-slate-400 font-normal">老師</span></h1>
+                                <p class="text-gold font-medium text-lg">資深數位行銷科技顧問 | 生成式 AI 創作者 | 創業導師</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm md:text-base">
+                                <div class="space-y-4">
+                                    <div>
+                                        <h3 class="text-neon border-b border-sky-900 pb-1 mb-2 font-bold flex items-center justify-center md:justify-start"><i class="fa-solid fa-briefcase mr-2"></i>現職 Current</h3>
+                                        <ul class="space-y-1 text-slate-300">
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>龍華科大 數位行銷講師</li>
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>智策慧 品牌行銷科技顧問</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-neon border-b border-sky-900 pb-1 mb-2 font-bold flex items-center justify-center md:justify-start"><i class="fa-solid fa-building mr-2"></i>經歷 Experience</h3>
+                                        <ul class="space-y-1 text-slate-300">
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>脈動心聯股份有限公司 創辦人暨執行長</li>
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>宏碁集團建碁 AOPEN 整合營銷處處長 / 全球品牌行銷總監 / 企業發言人</li>
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>台灣數位看板多媒體聯盟 (DSMA) 副會長</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <div>
+                                        <h3 class="text-neon border-b border-sky-900 pb-1 mb-2 font-bold flex items-center justify-center md:justify-start"><i class="fa-solid fa-graduation-cap mr-2"></i>學歷 Education</h3>
+                                        <ul class="space-y-1 text-slate-300">
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>台大 EMBA 商學組</li>
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>美國 Arizona State University 互動多媒體設計</li>
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>北科大 工業設計</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-neon border-b border-sky-900 pb-1 mb-2 font-bold flex items-center justify-center md:justify-start"><i class="fa-solid fa-chalkboard-user mr-2"></i>專家授課經歷</h3>
+                                        <ul class="space-y-1 text-slate-300">
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>CPC 生產力中心 經營管理顧問師班 / 中小企業成長創價能量 講師</li>
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>台大 / 長榮 EMBA / 北科大 / 政大 / 世新 業師</li>
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>2021 MarTech 行銷科技行銷長認證班 講師</li>
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>2021/2024/2025 T大使與產業尖兵 講師</li>
+                                            <li><i class="fa-solid fa-check text-gold/70 mr-2 text-xs"></i>2025 新光人壽 AI 工具應用 企業內訓講師</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="concept" class="scroll-mt-32 space-y-8">
+                <div class="text-center space-y-6">
+                    <h2 class="text-3xl md:text-5xl font-bold text-white neon-text tracking-wide mb-8">生活產業 AI 預測</h2>
+                    
+                    <div class="max-w-3xl mx-auto bg-slate-800/40 backdrop-blur-md border border-slate-700 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden group">
+                        <!-- 裝飾光暈 -->
+                        <div class="absolute top-0 left-1/4 w-32 h-32 bg-neon/10 rounded-full blur-3xl transition-transform duration-700 group-hover:scale-125"></div>
+                        <div class="absolute bottom-0 right-1/4 w-32 h-32 bg-gold/10 rounded-full blur-3xl transition-transform duration-700 group-hover:scale-125"></div>
+                        
+                        <div class="relative z-10 space-y-5">
+                            <p class="text-xl md:text-2xl text-slate-200 font-medium leading-relaxed tracking-wide">
+                                AI 不是預知未來，而是
+                                <span class="block sm:inline mt-2 sm:mt-0">
+                                    <span class="text-gold font-bold text-2xl md:text-3xl relative inline-block mx-1 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]">
+                                        預測下一步行動
+                                        <span class="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gold to-transparent opacity-70"></span>
+                                    </span>
+                                </span>
+                            </p>
+                            
+                            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 text-slate-300 pt-2 border-t border-slate-700/50 mt-4">
+                                <span class="text-base md:text-lg mt-3 sm:mt-0">用資料判斷人的下一個：</span>
+                                <div class="flex flex-wrap justify-center gap-2 mt-2 sm:mt-0">
+                                    <span class="px-3 py-1.5 bg-slate-900/80 border border-sky-800/60 rounded-lg text-neon text-sm font-semibold tracking-wider hover:bg-sky-900/50 transition-colors shadow-inner">🎯 需求</span>
+                                    <span class="px-3 py-1.5 bg-slate-900/80 border border-amber-800/60 rounded-lg text-gold text-sm font-semibold tracking-wider hover:bg-amber-900/50 transition-colors shadow-inner">🏃 行為</span>
+                                    <span class="px-3 py-1.5 bg-slate-900/80 border border-rose-800/60 rounded-lg text-rose-400 text-sm font-semibold tracking-wider hover:bg-rose-900/50 transition-colors shadow-inner">⚠️ 風險</span>
+                                    <span class="px-3 py-1.5 bg-slate-900/80 border border-emerald-800/60 rounded-lg text-emerald-400 text-sm font-semibold tracking-wider hover:bg-emerald-900/50 transition-colors shadow-inner">💡 商機</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-panel p-8 rounded-2xl border-l-4 border-l-neon hover:shadow-[0_0_20px_rgba(56,189,248,0.2)] transition-all">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-neon text-2xl">
+                                <i class="fa-solid fa-heart"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white">1. 人會想要什麼？</h3>
+                        </div>
+                        <p class="text-slate-400">分析顧客偏好、商品推薦與內容興趣。</p>
+                    </div>
+                    
+                    <div class="glass-panel p-8 rounded-2xl border-l-4 border-l-gold hover:shadow-[0_0_20px_rgba(251,191,36,0.2)] transition-all">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-gold text-2xl">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white">2. 什麼時候會要？</h3>
+                        </div>
+                        <p class="text-slate-400">掌握回購週期、尖峰需求與預約時段。</p>
+                    </div>
+
+                    <div class="glass-panel p-8 rounded-2xl border-l-4 border-l-green-400 hover:shadow-[0_0_20px_rgba(74,222,128,0.2)] transition-all">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-green-400 text-2xl">
+                                <i class="fa-solid fa-handshake"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white">3. 用什麼方式會成交？</h3>
+                        </div>
+                        <p class="text-slate-400">優化優惠、價格、文案與通路策略。</p>
+                    </div>
+
+                    <div class="glass-panel p-8 rounded-2xl border-l-4 border-l-rose-400 hover:shadow-[0_0_20px_rgba(251,113,133,0.2)] transition-all">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-rose-400 text-2xl">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white">4. 哪裡可能出問題？</h3>
+                        </div>
+                        <p class="text-slate-400">預警流失、客訴、缺貨、設備或人力風險。</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="map" class="scroll-mt-32 space-y-8">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-bold text-white neon-text">AI 預測的八大解決方案地圖</h2>
+                    <p class="text-slate-400">不要只問 AI 能預測什麼，要問「預測之後，誰要採取什麼行動？」</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-panel p-6 rounded-xl hover:-translate-y-2 transition-transform duration-300">
+                        <h4 class="text-neon font-bold mb-2"><i class="fa-solid fa-cart-shopping mr-2"></i>購買意圖</h4>
+                        <p class="text-sm text-slate-300 mb-3">會不會買、何時買、買什麼</p>
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-sm text-slate-400">
+                            <span class="text-white font-semibold">解法：</span>推薦商品、喚回名單、個人化優惠
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl hover:-translate-y-2 transition-transform duration-300">
+                        <h4 class="text-neon font-bold mb-2"><i class="fa-solid fa-users mr-2"></i>顧客偏好</h4>
+                        <p class="text-sm text-slate-300 mb-3">風格、價格帶、服務形式</p>
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-sm text-slate-400">
+                            <span class="text-white font-semibold">解法：</span>客群分眾、內容分流、服務組合
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl hover:-translate-y-2 transition-transform duration-300">
+                        <h4 class="text-gold font-bold mb-2"><i class="fa-solid fa-boxes-stacked mr-2"></i>需求備貨</h4>
+                        <p class="text-sm text-slate-300 mb-3">來客數、銷售量、庫存量</p>
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-sm text-slate-400">
+                            <span class="text-white font-semibold">解法：</span>補貨建議、食材準備、排班調整
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl hover:-translate-y-2 transition-transform duration-300">
+                        <h4 class="text-gold font-bold mb-2"><i class="fa-solid fa-headset mr-2"></i>客服意圖</h4>
+                        <p class="text-sm text-slate-300 mb-3">會問什麼、是否需要真人</p>
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-sm text-slate-400">
+                            <span class="text-white font-semibold">解法：</span>FAQ 分流、真人接手、成交提醒
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl hover:-translate-y-2 transition-transform duration-300">
+                        <h4 class="text-purple-400 font-bold mb-2"><i class="fa-solid fa-tag mr-2"></i>價格促銷</h4>
+                        <p class="text-sm text-slate-300 mb-3">折扣、方案、優惠券成效</p>
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-sm text-slate-400">
+                            <span class="text-white font-semibold">解法：</span>優惠組合、檔期策略、加值方案
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl hover:-translate-y-2 transition-transform duration-300">
+                        <h4 class="text-purple-400 font-bold mb-2"><i class="fa-solid fa-photo-film mr-2"></i>內容成效</h4>
+                        <p class="text-sm text-slate-300 mb-3">標題、圖片、短影音互動</p>
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-sm text-slate-400">
+                            <span class="text-white font-semibold">解法：</span>標題測試、素材排序、主題推薦
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl hover:-translate-y-2 transition-transform duration-300">
+                        <h4 class="text-rose-400 font-bold mb-2"><i class="fa-solid fa-shield-halved mr-2"></i>營運風險</h4>
+                        <p class="text-sm text-slate-300 mb-3">客訴、取消、缺貨、人力不足</p>
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-sm text-slate-400">
+                            <span class="text-white font-semibold">解法：</span>異常警示、客訴預警、維修排程
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl hover:-translate-y-2 transition-transform duration-300">
+                        <h4 class="text-rose-400 font-bold mb-2"><i class="fa-solid fa-heart-pulse mr-2"></i>健康生活</h4>
+                        <p class="text-sm text-slate-300 mb-3">睡眠、飲食、照護與風險</p>
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-sm text-slate-400">
+                            <span class="text-white font-semibold">解法：</span>照護提醒、風險分級、個人化建議
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="task" class="scroll-mt-32">
+                <div class="glass-panel p-8 md:p-12 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-gold/30 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                        <i class="fa-solid fa-map-location-dot text-9xl text-gold"></i>
+                    </div>
+
+                    <div class="relative z-10 space-y-8">
+                        <div class="text-center space-y-3">
+                            <div class="inline-block bg-amber-500/20 text-gold px-4 py-1.5 rounded-full text-sm font-bold tracking-wider border border-amber-500/30 mb-2">實作練習</div>
+                            <h2 class="text-3xl md:text-4xl font-bold text-white">建立你的 AI 行動藍圖</h2>
+                            <p class="text-slate-300">從「聽懂 AI」進展到「規劃 AI」。填寫以下四個核心問題，AI 將為您生成專屬的落地行動方案。</p>
+                        </div>
+
+                        <div class="flex flex-col md:flex-row gap-8">
+                            <!-- 表單區 -->
+                            <div class="flex-1 space-y-6">
+                                <form id="blueprintForm" class="space-y-5">
+                                    <div class="space-y-2">
+                                        <label class="flex items-center text-neon font-semibold">
+                                            <span class="w-6 h-6 rounded-full bg-slate-800 border border-neon flex items-center justify-center text-xs mr-2">1</span>
+                                            我想解決/預測什麼問題？
+                                        </label>
+                                        <select id="q1Select" required class="blueprint-input w-full p-3 rounded-xl text-white appearance-none cursor-pointer">
+                                            <option value="" disabled selected>請選擇您想解決的營運痛點...</option>
+                                            <optgroup label="【餐飲/食品】需求與備貨">
+                                                <option value="預測各門市明天的熱賣品項與需求量，減少食材浪費">食材備料：預測明日熱賣品項與需求量，減少浪費</option>
+                                                <option value="預測下週尖峰時段的來客數，優化排班配置">人力排班：預測尖峰時段來客數，優化排班配置</option>
+                                                <option value="預測顧客點餐時最可能加點的附餐與飲料組合，藉此提升客單價">套餐推薦：預測最容易被加點的組合，提升客單價</option>
+                                                <option value="分析商用冰箱等重要設備的運作數據，預測故障風險並提早保養">設備預警：預測商用設備故障風險，提早安排維修</option>
+                                            </optgroup>
+                                            <optgroup label="【零售/電商】銷售與庫存">
+                                                <option value="預測哪些會員下個月最有可能回購，精準發送優惠券">精準行銷：預測下個月最可能回購的會員</option>
+                                                <option value="預測各類商品的滯銷風險，提前規劃促銷檔期">庫存管理：預測商品滯銷風險，提前規劃促銷</option>
+                                                <option value="預測顧客下一個最可能購買的商品品項，進行個人化推薦">商品推薦：預測顧客下一個最想買的商品</option>
+                                                <option value="預測高機率退貨的商品與異常訂單，提早介入處理或調整運費策略">退貨預防：預測高退貨率的訂單，提早介入處理</option>
+                                            </optgroup>
+                                            <optgroup label="【旅宿/美容/服務】預約與客群">
+                                                <option value="預測未來一個月的平假日訂房率/預約率，實施動態定價">動態定價：預測未來預約率，調整價格策略</option>
+                                                <option value="找出已經超過消費週期且可能流失的高價值顧客">流失防範：預測即將流失的高價值顧客</option>
+                                                <option value="預測高機率 No-Show (未出席) 或臨時取消的預約，提早發送確認或實施候補">缺席防範：預測高機率 No-Show 的預約，提早確認</option>
+                                                <option value="預測現有顧客升級房型或加購美容/進階課程的意願，精準推銷加值方案">服務加值：預測顧客升級或加購意願，精準推銷</option>
+                                            </optgroup>
+                                            <optgroup label="【全產業通用】客服與風險">
+                                                <option value="根據顧客提問預測是否為客訴高風險，優先轉接真人客服">客服分流：預測客訴高風險，優先轉接真人</option>
+                                                <option value="分析過去行銷素材成效，預測本次活動最高點擊率的文案與圖片">內容優化：預測最高點擊率的文案與素材</option>
+                                                <option value="從客服對話或留言中預測顧客的高度購買意圖，自動推播專屬結帳連結">銷售轉換：從對話預測購買意圖，推送結帳連結</option>
+                                                <option value="預測突發的排班缺口或人員離職風險，及早啟動備援或招募計畫">人力預警：預測突發缺口或離職風險，及早備援</option>
+                                            </optgroup>
+                                            <optgroup label="其他">
+                                                <option value="custom">✏️ 自行輸入其他痛點...</option>
+                                            </optgroup>
+                                        </select>
+                                        <input type="text" id="q1Custom" placeholder="請輸入您想解決的具體問題..." class="blueprint-input w-full p-3 rounded-xl text-white placeholder-slate-500 hidden mt-2">
+                                        <button type="button" id="aiSuggestBtn" class="mt-2 text-sm text-neon hover:text-white border border-neon/50 hover:bg-neon/20 px-3 py-1.5 rounded-lg transition-colors flex items-center shadow">
+                                            <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i> 讓 AI 幫我構思步驟 2~4
+                                        </button>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center text-neon font-semibold">
+                                            <span class="w-6 h-6 rounded-full bg-slate-800 border border-neon flex items-center justify-center text-xs mr-2">2</span>
+                                            我手上有哪些可用的資料？
+                                        </label>
+                                        <input type="text" id="q2" required placeholder="例：過去一年的 POS 銷售明細、天氣資料" class="blueprint-input w-full p-3 rounded-xl text-white placeholder-slate-500">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center text-neon font-semibold">
+                                            <span class="w-6 h-6 rounded-full bg-slate-800 border border-neon flex items-center justify-center text-xs mr-2">3</span>
+                                            AI 預測後要產出什麼判斷？
+                                        </label>
+                                        <input type="text" id="q3" required placeholder="例：預測各門市明天的熱賣品項與需求量" class="blueprint-input w-full p-3 rounded-xl text-white placeholder-slate-500">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center text-neon font-semibold">
+                                            <span class="w-6 h-6 rounded-full bg-slate-800 border border-neon flex items-center justify-center text-xs mr-2">4</span>
+                                            預測結果要接到哪一個「行動」？
+                                        </label>
+                                        <input type="text" id="q4" required placeholder="例：系統自動產生採購建議表，由店長確認後下單" class="blueprint-input w-full p-3 rounded-xl text-white placeholder-slate-500">
+                                    </div>
+
+                                    <div class="pt-4 flex flex-col sm:flex-row gap-3">
+                                        <button type="submit" class="flex-1 bg-gradient-to-r from-neon to-sky-500 hover:from-sky-400 hover:to-neon text-darker font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all transform hover:-translate-y-1 flex justify-center items-center">
+                                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> 讓 AI 顧問優化藍圖
+                                        </button>
+                                        <!-- 歷史紀錄與備份按鈕 -->
+                                        <button type="button" id="openHistoryBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-5 py-3 rounded-xl transition-colors font-medium flex justify-center items-center gap-2">
+                                            <i class="fa-solid fa-clock-rotate-left"></i> 歷史紀錄與備份
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- 結果顯示區 -->
+                            <div class="flex-1">
+                                <div id="resultContainer" class="hidden h-full">
+                                    <div class="bg-slate-900/80 rounded-xl border border-sky-800/50 p-6 h-full flex flex-col relative">
+                                        <!-- Word Export Button -->
+                                        <button id="exportWordBtn" class="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-gold border border-gold/30 px-3 py-1.5 rounded text-sm transition-colors flex items-center shadow-lg">
+                                            <i class="fa-solid fa-file-word mr-1.5"></i>存成 Word
+                                        </button>
+                                        
+                                        <h3 class="text-xl font-bold text-gold mb-4 border-b border-slate-700 pb-2"><i class="fa-solid fa-robot mr-2"></i>AI 顧問優化建議</h3>
+                                        
+                                        <!-- For Word Export targeting -->
+                                        <div id="wordExportContent" class="flex-grow overflow-y-auto pr-2 custom-scrollbar markdown-body text-sm bg-slate-800/80 border border-slate-700 p-6 rounded-lg shadow-inner" style="max-height: 500px;">
+                                            
+                                            <!-- 新增：藍圖總覽區塊 -->
+                                            <div class="mb-6 p-5 bg-slate-900/60 rounded-xl border border-slate-700">
+                                                <h4 class="text-lg font-bold text-white mb-4 flex items-center"><i class="fa-solid fa-list-check text-neon mr-2"></i>您的原始藍圖設定</h4>
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <div class="text-xs text-slate-400 mb-1">1. 欲解決問題</div>
+                                                        <div id="summaryQ1" class="text-sm text-slate-200 font-medium"></div>
+                                                    </div>
+                                                    <div>
+                                                        <div class="text-xs text-slate-400 mb-1">2. 可用資料</div>
+                                                        <div id="summaryQ2" class="text-sm text-slate-200 font-medium"></div>
+                                                    </div>
+                                                    <div>
+                                                        <div class="text-xs text-slate-400 mb-1">3. 預測判斷</div>
+                                                        <div id="summaryQ3" class="text-sm text-slate-200 font-medium"></div>
+                                                    </div>
+                                                    <div>
+                                                        <div class="text-xs text-slate-400 mb-1">4. 對應行動</div>
+                                                        <div id="summaryQ4" class="text-sm text-slate-200 font-medium"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="w-full h-px bg-slate-700 my-6"></div>
+
+                                            <div id="aiResponse" class="text-slate-200 leading-relaxed">
+                                                <!-- 生成結果 -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Loading State -->
+                                <div id="loadingOverlay" class="hidden h-full flex-col items-center justify-center bg-slate-900/50 rounded-xl border border-dashed border-slate-600 min-h-[300px]">
+                                    <span class="loader mb-4 w-12 h-12"></span>
+                                    <p class="text-neon font-medium animate-pulse" id="loadingText">AI 顧問正在思考您的藍圖架構...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="w-full border-t border-slate-800 bg-slate-950 py-6 mt-12 z-40 relative">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-slate-500 text-sm">
+                &copy; 2026 TONY STUDIO. 本教材由 TONY STUDIO 楊文澤顧問設計. All Rights Reserved.
+            </p>
+        </div>
+    </footer>
+
+    <div id="historyModal" class="fixed inset-0 bg-slate-950/80 z-[110] hidden flex-col items-center justify-center backdrop-blur-sm px-4">
+        <div class="bg-slate-900 border border-neon/50 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-[0_0_50px_rgba(56,189,248,0.2)] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="bg-slate-800 p-5 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white flex items-center"><i class="fa-solid fa-clock-rotate-left text-neon mr-3"></i>歷史紀錄與雲端備份</h3>
+                <button id="closeHistoryBtn" class="text-slate-400 hover:text-white transition-colors p-1"><i class="fa-solid fa-times text-2xl"></i></button>
+            </div>
+            
+            <!-- Modal Actions -->
+            <div class="p-4 bg-slate-800/50 flex justify-between items-center border-b border-slate-700">
+                <p class="text-sm text-slate-400">所有藍圖紀錄都會自動存在本地端，您也可以備份到雲端或隨身碟中。</p>
+                <div class="flex gap-2">
+                    <button type="button" id="exportBackupBtn" class="bg-slate-700 hover:bg-slate-600 text-white border border-slate-500 px-3 py-2 rounded-lg text-sm transition-colors shadow" title="將所有紀錄打包匯出為 JSON">
+                        <i class="fa-solid fa-download mr-1"></i> 匯出備份
+                    </button>
+                    <button type="button" id="importBackupBtn" class="bg-sky-700 hover:bg-sky-600 text-white border border-sky-500 px-3 py-2 rounded-lg text-sm transition-colors shadow" title="從 JSON 檔案載入歷史紀錄">
+                        <i class="fa-solid fa-upload mr-1"></i> 載入備份
+                    </button>
+                    <input type="file" id="importFile" accept=".json" class="hidden">
+                </div>
+            </div>
+
+            <!-- History List -->
+            <div id="historyList" class="p-5 overflow-y-auto custom-scrollbar flex-grow space-y-4 bg-slate-900/50">
+                <!-- 紀錄列表動態插入 -->
+            </div>
+        </div>
+    </div>
+
+    <div id="aiAssistantWrapper" class="fixed bottom-6 right-6 z-[60] flex flex-col items-end pointer-events-none transition-all duration-300">
+        <!-- Toggle Button -->
+        <button id="toggleAssistantBtn" class="bg-gradient-to-r from-neon to-sky-600 hover:from-sky-400 hover:to-neon w-16 h-16 rounded-full text-white shadow-[0_0_20px_rgba(56,189,248,0.5)] flex items-center justify-center text-2xl transition-all duration-300 transform hover:scale-110 pointer-events-auto border-2 border-slate-900 relative">
+            <img src="https://i.postimg.cc/Gh8Zt7SX/S_56844323.jpg" alt="Tony" class="w-full h-full rounded-full object-cover">
+            <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold">1</div>
+        </button>
+
+        <!-- Chat Panel -->
+        <div id="aiAssistantPanel" class="hidden mt-4 bg-slate-900/95 backdrop-blur-xl border border-sky-800/50 rounded-2xl shadow-2xl flex flex-col pointer-events-auto w-[350px] h-[500px]">
+            <div class="bg-slate-800 p-3 rounded-t-2xl flex justify-between items-center border-b border-slate-700 cursor-move" id="aiDragHandle">
+                <div class="flex items-center gap-2">
+                    <img src="https://i.postimg.cc/Gh8Zt7SX/S_56844323.jpg" alt="Tony" class="w-8 h-8 rounded-full">
+                    <div>
+                        <h3 class="text-white font-bold text-sm">TONY 老師 AI 助理</h3>
+                        <p class="text-xs text-neon">在線為您解答</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="flex bg-slate-900 rounded p-1 gap-1">
+                        <button class="font-btn text-xs text-slate-400 hover:text-white px-1" data-size="text-sm">小</button>
+                        <button class="font-btn text-xs text-white bg-slate-700 rounded px-1" data-size="text-base">中</button>
+                        <button class="font-btn text-xs text-slate-400 hover:text-white px-1" data-size="text-lg">大</button>
+                    </div>
+                    <button id="closeAssistantBtn" class="text-slate-400 hover:text-white px-2"><i class="fa-solid fa-times"></i></button>
+                </div>
+            </div>
+
+            <div id="chatHistory" class="flex-grow p-4 overflow-y-auto custom-scrollbar space-y-4 text-base">
+                <div class="flex gap-2">
+                    <img src="https://i.postimg.cc/Gh8Zt7SX/S_56844323.jpg" class="w-8 h-8 rounded-full shrink-0">
+                    <div class="bg-slate-800 text-slate-200 p-3 rounded-2xl rounded-tl-none border border-slate-700">
+                        哈囉！我是 TONY 老師的 AI 助理。關於「生活產業 AI 預測解決方案」有任何不清楚的地方，或是想討論實作內容，都可以問我喔！
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 border-t border-slate-700 bg-slate-800/50 rounded-b-2xl">
+                <form id="chatForm" class="flex gap-2">
+                    <input type="text" id="chatInput" placeholder="請輸入您的問題..." class="flex-grow bg-slate-900 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neon" required>
+                    <button type="submit" class="bg-neon text-darker px-3 py-2 rounded-lg hover:bg-sky-400 transition-colors">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="absolute bottom-1 right-1 w-3 h-3 cursor-nwse-resize text-slate-500 opacity-50">
+                <i class="fa-solid fa-caret-down transform -rotate-45 text-[10px]"></i>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === 狀態管理 ===
+        let currentApiKey = localStorage.getItem('gemini_api_key') || '';
+        let chatMessages = [];
+        let assistantFontSize = 'text-base';
+        let blueprintHistory = JSON.parse(localStorage.getItem('blueprint_history') || '[]');
+
+        // === DOM 元素快取 ===
+        const elements = {
+            apiKeyInput: document.getElementById('apiKeyInput'),
+            saveApiKeyBtn: document.getElementById('saveApiKeyBtn'),
+            apiKeyStatus: document.getElementById('apiKeyStatus'),
+            apiKeyBar: document.getElementById('apiKeyBar'),
+            closeApiKeyBar: document.getElementById('closeApiKeyBar'),
+            openApiKeyBar: document.getElementById('openApiKeyBar'),
+            
+            mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+            mobileMenu: document.getElementById('mobileMenu'),
+            
+            form: document.getElementById('blueprintForm'),
+            q1Select: document.getElementById('q1Select'),
+            q1Custom: document.getElementById('q1Custom'),
+            aiSuggestBtn: document.getElementById('aiSuggestBtn'),
+            resultContainer: document.getElementById('resultContainer'),
+            aiResponse: document.getElementById('aiResponse'),
+            loadingOverlay: document.getElementById('loadingOverlay'),
+
+            exportWordBtn: document.getElementById('exportWordBtn'),
+            
+            // History Modal elements
+            openHistoryBtn: document.getElementById('openHistoryBtn'),
+            historyModal: document.getElementById('historyModal'),
+            closeHistoryBtn: document.getElementById('closeHistoryBtn'),
+            historyList: document.getElementById('historyList'),
+            exportBackupBtn: document.getElementById('exportBackupBtn'),
+            importBackupBtn: document.getElementById('importBackupBtn'),
+            importFile: document.getElementById('importFile'),
+
+            // AI Assistant elements
+            toggleAssistantBtn: document.getElementById('toggleAssistantBtn'),
+            aiAssistantPanel: document.getElementById('aiAssistantPanel'),
+            closeAssistantBtn: document.getElementById('closeAssistantBtn'),
+            chatForm: document.getElementById('chatForm'),
+            chatInput: document.getElementById('chatInput'),
+            chatHistory: document.getElementById('chatHistory'),
+            fontBtns: document.querySelectorAll('.font-btn')
+        };
+
+        // === 初始化 ===
+        document.addEventListener('DOMContentLoaded', () => {
+            initApiKey();
+            loadCurrentDraft();
+            setupEventListeners();
+        });
+
+        // === 事件綁定 ===
+        function setupEventListeners() {
+            // API Key 設定
+            elements.saveApiKeyBtn.addEventListener('click', saveApiKey);
+            elements.closeApiKeyBar.addEventListener('click', () => toggleApiKeyBar(false));
+            elements.openApiKeyBar.addEventListener('click', () => toggleApiKeyBar(true));
+
+            // 手機版選單
+            elements.mobileMenuBtn.addEventListener('click', () => {
+                elements.mobileMenu.classList.toggle('hidden');
+            });
+            document.querySelectorAll('.mobile-link').forEach(link => {
+                link.addEventListener('click', () => elements.mobileMenu.classList.add('hidden'));
+            });
+
+            // 表單提交與 Q1 邏輯綁定
+            elements.form.addEventListener('submit', handleBlueprintSubmit);
+            
+            elements.q1Select.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    elements.q1Custom.classList.remove('hidden');
+                    elements.q1Custom.focus();
+                } else {
+                    elements.q1Custom.classList.add('hidden');
+                }
+                saveCurrentDraft();
+            });
+            elements.q1Custom.addEventListener('input', saveCurrentDraft);
+            elements.aiSuggestBtn.addEventListener('click', handleAiSuggest);
+
+            ['q2', 'q3', 'q4'].forEach(id => {
+                document.getElementById(id).addEventListener('input', saveCurrentDraft);
+            });
+
+            // 歷史紀錄面板
+            elements.openHistoryBtn.addEventListener('click', openHistoryModal);
+            elements.closeHistoryBtn.addEventListener('click', () => elements.historyModal.classList.add('hidden'));
+            
+            // 匯出 / 載入備份 (打包歷史陣列)
+            elements.exportBackupBtn.addEventListener('click', exportBackupJson);
+            elements.importBackupBtn.addEventListener('click', () => elements.importFile.click());
+            elements.importFile.addEventListener('change', importBackupJson);
+            
+            // 匯出 Word
+            elements.exportWordBtn.addEventListener('click', exportToWord);
+
+            // AI 助理功能
+            elements.toggleAssistantBtn.addEventListener('click', () => toggleAssistant(true));
+            elements.closeAssistantBtn.addEventListener('click', () => toggleAssistant(false));
+            elements.chatForm.addEventListener('submit', handleChatSubmit);
+            
+            // 字體大小控制
+            elements.fontBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    elements.fontBtns.forEach(b => {
+                        b.classList.remove('text-white', 'bg-slate-700');
+                        b.classList.add('text-slate-400');
+                    });
+                    e.target.classList.remove('text-slate-400');
+                    e.target.classList.add('text-white', 'bg-slate-700');
+                    
+                    elements.chatHistory.classList.remove('text-sm', 'text-base', 'text-lg');
+                    assistantFontSize = e.target.dataset.size;
+                    elements.chatHistory.classList.add(assistantFontSize);
+                });
+            });
+        }
+
+        // === API Key 邏輯 ===
+        function initApiKey() {
+            if (currentApiKey) {
+                elements.apiKeyInput.value = currentApiKey;
+                updateApiKeyStatus(true);
+                elements.apiKeyBar.classList.add('hidden'); // 如果有設定，初始隱藏
+                elements.openApiKeyBar.classList.remove('hidden');
+            } else {
+                updateApiKeyStatus(false);
+                toggleApiKeyBar(true); // 沒設定則強制跳出
+            }
+        }
+
+        function saveApiKey() {
+            const key = elements.apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                currentApiKey = key;
+                updateApiKeyStatus(true);
+                
+                elements.saveApiKeyBtn.innerText = '已儲存!';
+                elements.saveApiKeyBtn.classList.replace('bg-neon', 'bg-green-400');
+                
+                setTimeout(() => {
+                    elements.saveApiKeyBtn.innerText = '儲存';
+                    elements.saveApiKeyBtn.classList.replace('bg-green-400', 'bg-neon');
+                    toggleApiKeyBar(false);
+                }, 1000);
+            } else {
+                alert('請輸入有效的 API Key');
+            }
+        }
+
+        function updateApiKeyStatus(isValid) {
+            elements.apiKeyStatus.innerHTML = isValid 
+                ? '<span class="text-green-400"><i class="fa-solid fa-check-circle mr-1"></i>API Key 已設定</span>' 
+                : '<span class="text-rose-400"><i class="fa-solid fa-triangle-exclamation mr-1"></i>尚未設定，請申請</span>';
+        }
+
+        function toggleApiKeyBar(show) {
+            if (show) {
+                elements.apiKeyBar.classList.remove('hidden'); // Ensure display block first
+                setTimeout(() => {
+                    elements.apiKeyBar.classList.remove('opacity-0', '-translate-y-10', 'pointer-events-none');
+                    elements.apiKeyBar.classList.add('opacity-100', 'translate-y-0', 'pointer-events-auto');
+                }, 10);
+                elements.openApiKeyBar.classList.add('hidden');
+            } else {
+                elements.apiKeyBar.classList.remove('opacity-100', 'translate-y-0', 'pointer-events-auto');
+                elements.apiKeyBar.classList.add('opacity-0', '-translate-y-10', 'pointer-events-none');
+                setTimeout(() => elements.apiKeyBar.classList.add('hidden'), 300);
+                elements.openApiKeyBar.classList.remove('hidden');
+            }
+        }
+
+        // === Q1 輔助取值與設值函數 ===
+        function getQ1Value() {
+            if (!elements.q1Select) return '';
+            if (elements.q1Select.value === 'custom') return elements.q1Custom.value.trim();
+            return elements.q1Select.value;
+        }
+
+        function setQ1Value(val) {
+            if (!val) {
+                elements.q1Select.value = "";
+                elements.q1Custom.classList.add('hidden');
+                return;
+            }
+            let found = false;
+            Array.from(elements.q1Select.options).forEach(opt => {
+                if (opt.value === val) found = true;
+            });
+            if (found) {
+                elements.q1Select.value = val;
+                elements.q1Custom.classList.add('hidden');
+            } else {
+                elements.q1Select.value = 'custom';
+                elements.q1Custom.value = val;
+                elements.q1Custom.classList.remove('hidden');
+            }
+        }
+
+        // === 草稿與歷史紀錄管理 ===
+        // 1. 本地即時草稿 (防呆用)
+        function saveCurrentDraft() {
+            const draft = {
+                q1: getQ1Value(),
+                q2: document.getElementById('q2').value,
+                q3: document.getElementById('q3').value,
+                q4: document.getElementById('q4').value
+            };
+            localStorage.setItem('blueprint_draft', JSON.stringify(draft));
+        }
+
+        function loadCurrentDraft() {
+            try {
+                const draft = JSON.parse(localStorage.getItem('blueprint_draft'));
+                if (draft) {
+                    setQ1Value(draft.q1);
+                    document.getElementById('q2').value = draft.q2 || '';
+                    document.getElementById('q3').value = draft.q3 || '';
+                    document.getElementById('q4').value = draft.q4 || '';
+                }
+            } catch (e) {}
+        }
+
+        // 2. 存入歷史陣列 (生成成功後調用)
+        function saveToHistory(q1, q2, q3, q4, aiResponse) {
+            blueprintHistory.unshift({ // 加到最前面
+                id: Date.now(),
+                date: new Date().toLocaleString('zh-TW', { hour12: false }),
+                q1, q2, q3, q4,
+                aiResponse
+            });
+            localStorage.setItem('blueprint_history', JSON.stringify(blueprintHistory));
+        }
+
+        // 3. 打開歷史面板並渲染
+        function openHistoryModal() {
+            renderHistoryList();
+            elements.historyModal.classList.remove('hidden');
+            elements.historyModal.classList.add('flex');
+        }
+
+        function renderHistoryList() {
+            if (blueprintHistory.length === 0) {
+                elements.historyList.innerHTML = `
+                    <div class="text-center py-10">
+                        <i class="fa-solid fa-folder-open text-4xl text-slate-600 mb-3"></i>
+                        <p class="text-slate-400">尚無歷史紀錄。成功生成的藍圖會自動儲存於此。</p>
+                    </div>`;
+                return;
+            }
+            
+            elements.historyList.innerHTML = blueprintHistory.map(item => `
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col md:flex-row justify-between gap-4 items-start md:items-center hover:border-neon/50 transition-colors">
+                    <div class="flex-grow min-w-0">
+                        <div class="text-xs text-sky-400 mb-1 font-medium"><i class="fa-regular fa-calendar mr-1"></i>${item.date}</div>
+                        <div class="text-white font-bold truncate text-lg">${item.q1}</div>
+                        <div class="text-sm text-slate-400 truncate mt-1">資料: ${item.q2}</div>
+                    </div>
+                    <div class="flex gap-2 shrink-0 w-full md:w-auto justify-end">
+                        <button onclick="loadHistoryItem(${item.id})" class="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition-colors flex-1 md:flex-none text-center">
+                            <i class="fa-solid fa-eye mr-1"></i>查看
+                        </button>
+                        <button onclick="deleteHistoryItem(${item.id})" class="bg-rose-900/50 hover:bg-rose-800 text-rose-300 px-4 py-2 rounded-lg text-sm transition-colors border border-rose-800 shadow">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 全域函數供 inline onClick 呼叫
+        window.loadHistoryItem = function(id) {
+            const item = blueprintHistory.find(h => h.id === id);
+            if(item) {
+                // 1. 還原左側表單
+                setQ1Value(item.q1);
+                document.getElementById('q2').value = item.q2;
+                document.getElementById('q3').value = item.q3;
+                document.getElementById('q4').value = item.q4;
+                saveCurrentDraft(); // 更新當前草稿狀態
+                
+                // 2. 填入右側總覽
+                document.getElementById('summaryQ1').textContent = item.q1;
+                document.getElementById('summaryQ2').textContent = item.q2;
+                document.getElementById('summaryQ3').textContent = item.q3;
+                document.getElementById('summaryQ4').textContent = item.q4;
+
+                // 3. 填入 AI 建議
+                elements.aiResponse.innerHTML = marked.parse(item.aiResponse || '');
+                elements.resultContainer.classList.remove('hidden');
+                elements.historyModal.classList.add('hidden');
+                
+                // 延遲捲動確保渲染完成
+                setTimeout(() => {
+                    elements.resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+        };
+
+        window.deleteHistoryItem = function(id) {
+            if(confirm('確定要永久刪除這筆藍圖紀錄嗎？')) {
+                blueprintHistory = blueprintHistory.filter(h => h.id !== id);
+                localStorage.setItem('blueprint_history', JSON.stringify(blueprintHistory));
+                renderHistoryList();
+            }
+        };
+
+        // === 備份 (Export/Import) 邏輯 ===
+        function exportBackupJson() {
+            if (blueprintHistory.length === 0) {
+                alert('目前沒有歷史紀錄可備份。');
+                return;
+            }
+            const blob = new Blob([JSON.stringify(blueprintHistory, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `AI藍圖歷史備份_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importBackupJson(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const importedData = JSON.parse(evt.target.result);
+                    if (Array.isArray(importedData)) {
+                        // 合併陣列，避免重複 ID
+                        const currentIds = new Set(blueprintHistory.map(item => item.id));
+                        const newItems = importedData.filter(item => item.id && item.q1 && !currentIds.has(item.id));
+                        
+                        blueprintHistory = [...newItems, ...blueprintHistory];
+                        // 依日期排序 (新的在前)
+                        blueprintHistory.sort((a, b) => b.id - a.id);
+                        
+                        localStorage.setItem('blueprint_history', JSON.stringify(blueprintHistory));
+                        renderHistoryList();
+                        alert(`備份載入成功！共匯入 ${newItems.length} 筆新紀錄。`);
+                    } else {
+                        alert('無效的備份檔案格式（應為陣列）。');
+                    }
+                } catch (err) {
+                    alert('讀取或解析檔案失敗。');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // 讓同一個檔案能被重複選擇
+        }
+
+        // === 匯出 Word 邏輯 ===
+        function exportToWord() {
+            const content = document.getElementById('wordExportContent').innerHTML;
+            const title = getQ1Value() || 'AI 藍圖';
+            
+            const header = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>${title}</title>
+                <style>
+                    body { font-family: 'Microsoft JhengHei', Arial, sans-serif; line-height: 1.6; }
+                    h1, h2, h3 { color: #0284c7; }
+                    h1 { font-size: 18pt; border-bottom: 2px solid #0284c7; padding-bottom: 5px; }
+                    h2 { font-size: 14pt; margin-top: 20px;}
+                    p { margin-bottom: 10px; }
+                    ul { margin-bottom: 15px; }
+                    li { margin-bottom: 5px; }
+                    strong { color: #b45309; }
+                </style>
+                </head><body>
+                <h1>你的 AI 行動藍圖：${title}</h1>
+            `;
+            const footer = "</body></html>";
+            const sourceHTML = header + content + footer;
+            
+            const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = url;
+            fileDownload.download = `AI_Blueprint_${title.substring(0,10)}.doc`;
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+            URL.revokeObjectURL(url);
+        }
+
+        // === API 呼叫與表單提交 ===
+        async function callGeminiAPI(systemInstruction, userPrompt) {
+            if (!currentApiKey) throw new Error("請先設定 Gemini API Key。");
+            
+            // 使用 gemini-2.5-flash 模型，無嚴格 token 限制
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentApiKey}`;
+            const requestBody = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] },
+                generationConfig: { temperature: 0.7 }
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error?.message || "API 呼叫失敗");
+            }
+
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        }
+
+        async function handleAiSuggest() {
+            const q1Val = getQ1Value();
+            if (!q1Val) {
+                alert('請先在第一項下拉選單選擇或輸入您「想解決/預測什麼問題？」');
+                return;
+            }
+            if (!currentApiKey) {
+                alert('請先點擊左下角設定 API Key 才能使用 AI 助手功能！');
+                toggleApiKeyBar(true);
+                return;
+            }
+
+            const originalBtnText = elements.aiSuggestBtn.innerHTML;
+            elements.aiSuggestBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> AI 正在構思欄位 2~4...';
+            elements.aiSuggestBtn.disabled = true;
+
+            try {
+                const systemPrompt = `你是一位資深的生活產業 AI 導入顧問。
+請根據使用者提供的「營運痛點」，幫他構思 AI 預測行動藍圖的後續三個環節。
+務必只回傳純 JSON 格式字串，不要包含 Markdown 語法或其他文字說明，屬性名稱為 q2, q3, q4：
+{
+  "q2": "資料來源 (建議2-3項容易取得的營運資料)",
+  "q3": "AI 預測產出 (一句話說明產出的預測結果與判斷)",
+  "q4": "下一步行動 (預測結果對應的具體營運動作，例如：發送優惠、調整排班表、真人客服介入等)"
+}`;
+                const userPrompt = `營運痛點：${q1Val}`;
+                
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentApiKey}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        generationConfig: { temperature: 0.7 }
+                    })
+                });
+
+                if (!response.ok) throw new Error("API 呼叫失敗");
+                const data = await response.json();
+                const text = data.candidates[0].content.parts[0].text;
+                
+                // 安全解析 JSON
+                let jsonStr = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+                const result = JSON.parse(jsonStr);
+
+                // 填入對應欄位
+                document.getElementById('q2').value = result.q2 || '';
+                document.getElementById('q3').value = result.q3 || '';
+                document.getElementById('q4').value = result.q4 || '';
+                
+                // 觸發邊框變色特效提示使用者
+                ['q2', 'q3', 'q4'].forEach(id => {
+                    const el = document.getElementById(id);
+                    el.classList.add('ring-2', 'ring-gold');
+                    setTimeout(() => el.classList.remove('ring-2', 'ring-gold'), 1500);
+                });
+                
+                saveCurrentDraft();
+            } catch (error) {
+                console.error(error);
+                alert('生成失敗，請檢查 API Key 或是重新嘗試。');
+            } finally {
+                elements.aiSuggestBtn.innerHTML = originalBtnText;
+                elements.aiSuggestBtn.disabled = false;
+            }
+        }
+
+        async function handleBlueprintSubmit(e) {
+            e.preventDefault();
+            
+            if (!currentApiKey) {
+                alert('請先點擊左下角設定 API Key 才能使用 AI 顧問功能！');
+                toggleApiKeyBar(true);
+                return;
+            }
+
+            const inputs = {
+                q1: getQ1Value(),
+                q2: document.getElementById('q2').value,
+                q3: document.getElementById('q3').value,
+                q4: document.getElementById('q4').value
+            };
+            
+            if (!inputs.q1) {
+                alert('請先選擇或輸入第一項「我想解決/預測什麼問題？」');
+                return;
+            }
+
+            // --- 新增：將填寫的內容立刻填入右側總覽區 ---
+            document.getElementById('summaryQ1').textContent = inputs.q1;
+            document.getElementById('summaryQ2').textContent = inputs.q2;
+            document.getElementById('summaryQ3').textContent = inputs.q3;
+            document.getElementById('summaryQ4').textContent = inputs.q4;
+            // ------------------------------------------
+
+            elements.resultContainer.classList.add('hidden');
+            elements.loadingOverlay.classList.remove('hidden');
+            elements.loadingOverlay.classList.add('flex');
+
+            const systemPrompt = `你是一位資深的「生活產業 AI 應用規劃師」(化名 TONY 老師)。
+任務：審閱使用者填寫的「AI 預測行動藍圖」草稿，給出專業的優化建議與具體落地步驟。解除任何輸出字數限制，詳細解答。
+語氣：專業、鼓勵、務實、條理分明。使用繁體中文。
+格式：使用 Markdown 格式。
+結構必須包含：
+1. 【藍圖健診】點評目前規劃的優缺點。
+2. 【資料擴充建議】建議還能加入哪些容易取得的資料。
+3. 【模型與規則建議】不要提太複雜的演算法，給出實務上的「高/中/低」分類規則建議。
+4. 【行動落地指南】具體說明這個流程要怎麼串接到現有的工具(如 LINE OA, POS, 排班表)。`;
+
+            const userPrompt = `這是我初步規劃的 AI 藍圖，請幫我優化：
+1. 想解決的問題：${inputs.q1}
+2. 手上可用資料：${inputs.q2}
+3. 預測後產出判斷：${inputs.q3}
+4. 預測結果的行動：${inputs.q4}`;
+
+            try {
+                const text = await callGeminiAPI(systemPrompt, userPrompt);
+                
+                // 顯示結果
+                elements.aiResponse.innerHTML = marked.parse(text);
+                elements.loadingOverlay.classList.add('hidden');
+                elements.loadingOverlay.classList.remove('flex');
+                elements.resultContainer.classList.remove('hidden');
+                elements.resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+                // 自動儲存到歷史紀錄陣列
+                saveToHistory(inputs.q1, inputs.q2, inputs.q3, inputs.q4, text);
+                
+            } catch (error) {
+                alert('生成失敗：' + error.message);
+                elements.loadingOverlay.classList.add('hidden');
+                elements.loadingOverlay.classList.remove('flex');
+            }
+        }
+
+        // === AI 助理對話邏輯 ===
+        function toggleAssistant(show) {
+            if (show) {
+                elements.aiAssistantPanel.classList.remove('hidden');
+                elements.toggleAssistantBtn.classList.add('hidden');
+                elements.toggleAssistantBtn.innerHTML = `<img src="https://i.postimg.cc/Gh8Zt7SX/S_56844323.jpg" class="w-full h-full rounded-full object-cover">`;
+            } else {
+                elements.aiAssistantPanel.classList.add('hidden');
+                elements.toggleAssistantBtn.classList.remove('hidden');
+            }
+        }
+
+        function appendMessage(role, text) {
+            const isUser = role === 'user';
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex gap-2 ${isUser ? 'flex-row-reverse' : ''}`;
+            
+            const avatar = isUser ? 
+                '<div class="w-8 h-8 rounded-full bg-neon flex items-center justify-center shrink-0 text-darker font-bold"><i class="fa-solid fa-user"></i></div>' : 
+                '<img src="https://i.postimg.cc/Gh8Zt7SX/S_56844323.jpg" class="w-8 h-8 rounded-full shrink-0">';
+            
+            const bubbleClasses = isUser ? 
+                'bg-neon text-darker p-3 rounded-2xl rounded-tr-none' : 
+                'bg-slate-800 text-slate-200 p-3 rounded-2xl rounded-tl-none border border-slate-700';
+
+            const content = isUser ? 
+                text.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 
+                marked.parse(text);
+
+            msgDiv.innerHTML = `
+                ${avatar}
+                <div class="${bubbleClasses} prose prose-invert prose-sm max-w-full">
+                    ${content}
+                </div>
+            `;
+            
+            elements.chatHistory.appendChild(msgDiv);
+            elements.chatHistory.scrollTop = elements.chatHistory.scrollHeight;
+        }
+
+        async function handleChatSubmit(e) {
+            e.preventDefault();
+            const message = elements.chatInput.value.trim();
+            if (!message) return;
+
+            if (!currentApiKey) {
+                alert('請先在左下角設定 API Key');
+                return;
+            }
+
+            appendMessage('user', message);
+            chatMessages.push({ role: 'user', parts: [{ text: message }] });
+            elements.chatInput.value = '';
+
+            const loadingId = 'loading-' + Date.now();
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = loadingId;
+            loadingDiv.className = "flex gap-2";
+            loadingDiv.innerHTML = `
+                <img src="https://i.postimg.cc/Gh8Zt7SX/S_56844323.jpg" class="w-8 h-8 rounded-full shrink-0">
+                <div class="bg-slate-800 text-slate-200 p-3 rounded-2xl rounded-tl-none border border-slate-700 flex items-center gap-1">
+                    <span class="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></span>
+                    <span class="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
+                    <span class="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                </div>
+            `;
+            elements.chatHistory.appendChild(loadingDiv);
+            elements.chatHistory.scrollTop = elements.chatHistory.scrollHeight;
+
+            const systemPrompt = `你是 TONY 老師(楊文澤)的專屬 AI 助理。
+任務是回答學員關於「生活產業 AI 預測解決方案」的問題。
+保持友善、專業。無字數限制，請使用 gemini-2.5-flash 盡情發揮。使用繁體中文。`;
+
+            const apiHistory = chatMessages.map(msg => ({
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: msg.parts
+            }));
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentApiKey}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: apiHistory,
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        generationConfig: { temperature: 0.7 }
+                    })
+                });
+
+                document.getElementById(loadingId).remove();
+
+                if (!response.ok) throw new Error("API 請求失敗");
+
+                const data = await response.json();
+                const aiText = data.candidates[0].content.parts[0].text;
+                
+                appendMessage('model', aiText);
+                chatMessages.push({ role: 'model', parts: [{ text: aiText }] });
+
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                appendMessage('model', '抱歉，系統遇到問題，請檢查您的 API Key 是否有效。');
+            }
+        }
+    </script>
+</body>
+</html>
